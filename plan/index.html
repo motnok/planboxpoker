@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Planbox poker</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <link href='//fonts.googleapis.com/css?family=Ewert' rel='stylesheet' type='text/css'>
+        <link href="/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="/css/bootstrap-responsive.css" rel="stylesheet">
+        <link href='/style.css' rel='stylesheet' type='text/css'>
+    </head>
+    <body>
+        <header>
+            <h1 class="saloon"><span>Planbox</span> POKER</h1>
+        </header>
+        <section>
+            <div class="container hide" id="login">
+                <div class="row">
+                    <div class="span4 offset4">
+                        <form class="form-signin">
+                            <h3>Please sign in</h3>
+                            <input type="email" class="input-block-level" name="email" placeholder="Email address" required>
+                            <input type="password" class="input-block-level" name="password" placeholder="Password" required>
+                            <button class="btn btn-block btn-primary" type="submit">Sign in</button>
+                            <br /><small class="help-block">Sign in using your planbox credentials. <br />This app does not store anything and communication with planbox is done using https.</small>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="container hide" id="planning">
+                <div class="row">
+                    <div class="span12">
+                        <div class="hero-unit">
+                            <h1></h1>
+                            <div></div>
+                        </div>
+                    </div>
+                    <ol class="row" id="cards">
+                        <li class="span1"><a href="#" class="btn btn-large btn-block value-unknown">?</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">1</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">2</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">3</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">5</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">8</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">13</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">21</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">34</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">55</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block btn-primary card">89</a></li>
+                        <li class="span1"><a href="#" class="btn btn-large btn-block skip-planning">&rarr;</a></li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <script>
+
+        (function(){
+
+            $.ajaxSetup({
+                type: 'POST',
+                crossDomain: true,
+                dataType: 'jsonp'
+            });
+
+            var user = null;
+            var stories = [];
+            var storyIndex = null;
+            var productId = window.location.hash.substr(1);
+
+            var init = function()
+            {
+                //Check if user is logged in - is he, go to planning, else display login
+                getLoggedInUser(function(data){
+                    // get the user
+                    user = data.content;
+
+                    getStories(productId, function(data){
+                        stories = data.content;
+                        showStory(nextStory());
+                    }, function(){
+                        console.log(data)
+                    });
+                }, showLogin);
+            }
+
+            var request = function(api, data, successCallback, errorCallback)
+            {
+                $.ajax({
+                    url: 'https://www.planbox.com/api/' + api, 
+                    data: data,
+                    success: function(data){
+                        switch(data.code)
+                        {
+                            case 'ok':
+                                return successCallback ? successCallback(data) : null;
+                                break;
+                            default:
+                                return errorCallback ? errorCallback(data) : null;
+                                break;
+                        }
+                    },
+                    error: function(xhr, status, thrown)
+                    {
+                        console.log('Error');
+                        console.log(thrown);
+                    }
+                });
+            }
+
+            var login = function(credentials, successCallback, errorCallback)
+            {
+                request('login', credentials, successCallback, errorCallback);
+            }
+
+            var getLoggedInUser = function(successCallback, errorCallback)
+            {
+                request('get_logged_resource', null, successCallback, errorCallback);
+            }
+
+            var getStories = function(productId, successCallback, errorCallback)
+            {
+                request('get_stories', {
+                    product_id: productId,
+                    timeframe: ['backlog']
+                }, successCallback, errorCallback);
+            }
+
+            var getUserTag = function()
+            {
+                if(user)
+                    return 'planbox-poker-' + user.email;
+                return null;
+            }
+
+            var getVotesFromTags = function(tags)
+            {
+                var returnTags = [];
+                for(var i=0; i<tags.length; i++)
+                {
+                    var match = tags[i].match(/^planbox-poker-(.+)\:(\d+)$/i);
+                    if(match)
+                    {
+                        returnTags.push({
+                            email: match[1],
+                            score: parseInt(match[2])
+                        });
+                    }
+                }
+                return returnTags;
+            }
+
+            var updateStoryScore = function(story, score, successCallback, errorCallback)
+            {
+                if(!story)
+                    errorCallback({});
+
+                //Get the story fresh from the servers
+                request('get_story', {
+                    story_id: story.id
+                }, function(data){
+
+                    var updatedStory = data.content;
+                    var tags = updatedStory.tags.split(',');
+                    tags.push(getUserTag() + ':' + score);
+
+                    var summedScore = 0;
+                    var summedVotes = 0;
+
+                    // Get all tags with scores, sum and devide
+                    var votes = getVotesFromTags(tags);
+                    for(var i=0; i<votes.length; i++)
+                    {
+                        summedVotes++;
+                        summedScore += parseInt(votes[i].score);
+                    }
+
+                    request('update_story', {
+                        story_id: story.id,
+                        name: story.name,
+                        points: Math.round(summedScore / summedVotes),
+                        tags: tags.join(',')
+                    }, successCallback, errorCallback);
+                }, errorCallback)
+            }
+
+            var showLogin = function()
+            {
+                $('#login').show().find('form').submit(function(e){
+                    e.preventDefault();
+                    var $login = $(this);
+                    $login.find('button').attr('disabled', 'disabled');
+                    login($(this).serialize(), function(data){
+                        $('#login').hide();
+                        $login.find('button').removeAttr('disabled', '');
+                        init();
+                    }, function(data){
+                        alert(data.content);
+                        $login.find('button').removeAttr('disabled');
+                    })
+                })
+            }
+
+            var showStory = function(story)
+            {
+                if(story)
+                {
+                    $('#cards').show();
+                    $('#planning').fadeIn('slow').data('story', story).find('h1').text(story.name)
+                        .siblings('div').html(story.description);
+                }
+                else
+                {
+                    $('#cards').hide();
+                    $('#planning').fadeIn('slow').data('story', null).find('h1').text('There are no more stories to play...')
+                        .siblings('div').append($('<a class="btn btn-success btn-large">Redraw...</a>').click(function(e){
+                            e.preventDefault;
+                            storyIndex = null;
+
+                            $('#planning').fadeOut('fast', function(){
+                                getStories(productId, function(data){
+                                    //TODO: Check for content length
+                                    stories = data.content;
+                                    showStory(nextStory());
+                                }, function(){
+                                    console.log(data)
+                                });
+                            });
+
+                        }));
+                }
+            }
+
+            var nextStory = function()
+            {
+
+                if(storyIndex != null)
+                {
+                    storyIndex++;
+                }
+                else
+                {
+                    storyIndex = 0;
+                }
+
+                if(stories.length > 0)
+                {
+                    var hasVoted = function(){
+                        var tags = stories[storyIndex].tags.split(',');
+
+                        var votes = getVotesFromTags(tags);
+                        for(var i=0; i<votes.length; i++)
+                        {
+                            if(votes[i].email == user.email)
+                                return true;
+                        }
+                        return false;
+                    }
+
+                    // Check if user has estimated
+                    for(true; storyIndex<stories.length; storyIndex++)
+                    {
+                        if(hasVoted())
+                            continue;
+                        break;
+                    }
+
+                    if(storyIndex < stories.length)
+                        return stories[storyIndex];
+                }
+
+                return null;
+            }
+
+            //Attach events
+            $('#cards > li > a.card, #cards > li > a.value-unknown').click(function(e){
+                e.preventDefault();
+                var story = $('#planning').data('story');
+                if(!story)
+                    return alert('No story to play!');
+
+                $('#cards > li > a.btn').addClass('disabled');
+
+                var value = $(this).text();
+                if(value == '?')
+                    value = 0;
+
+                updateStoryScore(story, value, function(){
+                    $('#planning').fadeOut('fast', function(){
+                        $('#cards > li > a.btn').removeClass('disabled');
+                        showStory(nextStory());
+                    });
+                }, function(){
+                    $('#cards > li > a.btn').removeClass('disabled');
+                });
+            });
+
+            $('#cards > li > a.skip-planning').click(function(e){
+                e.preventDefault();
+                $('#cards > li > a.btn').addClass('disabled');
+                $('#planning').fadeOut('fast', function(){
+                    $('#cards > li > a.btn').removeClass('disabled');
+                    showStory(nextStory());
+                });
+            });
+
+            init();
+
+        })();
+
+        </script>
+
+    </body>
+</html>
