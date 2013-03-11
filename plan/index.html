@@ -35,6 +35,7 @@
                         <div class="hero-unit">
                             <h1></h1>
                             <div></div>
+                            <small><a href="#" target="_blank">Show story...</a></small>
                         </div>
                     </div>
                     <ol class="row" id="cards">
@@ -205,11 +206,13 @@
 
             var showStory = function(story)
             {
+                console.log(story);
                 if(story)
                 {
                     $('#cards').show();
                     $('#planning').fadeIn('slow').data('story', story).find('h1').text(story.name)
-                        .siblings('div').html(story.description);
+                        .siblings('div').html(story.description)
+                        .siblings('small').show().find('a').attr('href', 'http://www.planbox.com/stories/' + story.id);
                 }
                 else
                 {
@@ -229,7 +232,8 @@
                                 });
                             });
 
-                        }));
+                        }))
+                        .siblings('small').hide();
                 }
             }
 
