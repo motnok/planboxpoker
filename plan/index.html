@@ -80,7 +80,7 @@
                     getStories(productId, function(data){
                         stories = data.content;
                         showStory(nextStory());
-                    }, function(){
+                    }, function(data){
                         console.log(data)
                     });
                 }, showLogin);
@@ -124,7 +124,7 @@
             {
                 request('get_stories', {
                     product_id: productId,
-                    timeframe: ['backlog']
+                    timeframe: ['next', 'backlog']
                 }, successCallback, errorCallback);
             }
 
