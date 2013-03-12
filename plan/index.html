@@ -176,7 +176,7 @@
                     {
                         if(votes[i].score == 0)
                             continue;
-                        
+
                         summedVotes++;
                         summedScore += parseInt(votes[i].score);
                     }
@@ -184,7 +184,7 @@
                     request('update_story', {
                         story_id: story.id,
                         name: story.name,
-                        points: Math.round(summedScore / summedVotes),
+                        points: summedVotes == 0 ? 0 : Math.round(summedScore / summedVotes),
                         tags: tags.join(',')
                     }, successCallback, errorCallback);
                 }, errorCallback)
