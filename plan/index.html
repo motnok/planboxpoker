@@ -33,6 +33,7 @@
                 <div class="row">
                     <div class="span12">
                         <div class="hero-unit">
+                            <h6></h6>
                             <h1></h1>
                             <div></div>
                             <small><a href="#" target="_blank">Show story...</a></small>
@@ -129,6 +130,14 @@
                 }, successCallback, errorCallback);
             }
 
+            var getProject = function(productId, projectId, successCallback, errorCallback)
+            {
+                request('get_project', {
+                    product_id: productId,
+                    project_id: projectId
+                }, successCallback, errorCallback);
+            }
+
             var getUserTag = function()
             {
                 if(user)
@@ -211,10 +220,15 @@
             {
                 if(story)
                 {
-                    $('#cards').show();
-                    $('#planning').fadeIn('slow').data('story', story).find('h1').text(story.name)
-                        .siblings('div').html(story.description)
-                        .siblings('small').show().find('a').attr('href', 'http://www.planbox.com/stories/' + story.id);
+                    getProject(story.product_id, story.project_id, function(data){
+                        $('#cards').show();
+                        $('#planning').fadeIn('slow').data('story', story).find('h1').text(story.name)
+                            .siblings('div').html(story.description)
+                            .siblings('h6').show().text(data.content.name)
+                            .siblings('small').show().find('a').attr('href', 'http://www.planbox.com/stories/' + story.id);
+                    }, function(){
+                        alert(data.content);
+                    })
                 }
                 else
                 {
@@ -235,7 +249,8 @@
                             });
 
                         }))
-                        .siblings('small').hide();
+                        .siblings('small').hide()
+                        .siblings('h6').empty().hide();
                 }
             }
 
