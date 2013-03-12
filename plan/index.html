@@ -234,7 +234,7 @@
                 {
                     $('#cards').hide();
                     $('#planning').fadeIn('slow').data('story', null).find('h1').text('There are no more stories to play...')
-                        .siblings('div').append($('<a class="btn btn-success btn-large">Redraw...</a>').click(function(e){
+                        .siblings('div').empty().append($('<a class="btn btn-success btn-large">Redraw...</a>').click(function(e){
                             e.preventDefault;
                             storyIndex = null;
 
